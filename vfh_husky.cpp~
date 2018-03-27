@@ -37,7 +37,7 @@ ros::Subscriber scanSub;
 ros::Publisher pub=nh.advertise<geometry_msgs::Twist>("husky_velocity_controller/cmd_vel", 100);
 scanSub=nh.subscribe<sensor_msgs::LaserScan>("scan",10,processLaserScan);
     
-    ros::Subscriber sub = nh.subscribe("imu_data", 10, chatterCallback);
+    ros::Subscriber sub = nh.subscribe("imu_data", 1000, chatterCallback);
 
 ros::spin();
 

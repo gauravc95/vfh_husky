@@ -10,6 +10,9 @@ project(random_husky_driver)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+   sensor_msgs
+  
+  rospy
 )
 
 ## System dependencies are found with CMake's conventions
@@ -197,5 +200,5 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(random_driver random_driver.cpp )
+add_executable(random_driver vfh_husky.cpp )
 target_link_libraries(random_driver ${catkin_LIBRARIES})
