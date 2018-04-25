@@ -7,32 +7,35 @@
 #include <string>
 #include <math.h>
 #include <nav_msgs/Odometry.h>      
-#include "sensor_msgs/Imu.h"
 #include <tf/transform_datatypes.h>
 #include "tf/transform_listener.h"
 #include <angles/angles.h>
+
 #define PI 3.14159265
+#define DMAX 10*sqrt(2)
+#define A 8
+#define B 0.5
 
 
 
 //creatindg the matrix
-std::vector<std::vector<double> > matrix(20, std::vector<double>(20, 0));   //20 rows and 20 columns initialized to 0
+std::vector<std::vector<double> > histogramGrid(20, std::vector<double>(20, 0));  //20 rows and 20 columns initialized to 0
+std::vector<std::vector<double> > direction(20, std::vector<double>(20, 0));
+std::vector<std::vector<double> > magnitude(20, std::vector<double>(20, 0));
+
+
 double curr_x=10,curr_y=10;
 
 
 //if  distance is not between 29-31 then it has obstacle
+double bot_position_x=10,bot_position_y=10;
 
 
+void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value from polar to matrix
+{
+        double x1=0,y1=0;
 
 
-
-void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
-    //Ranges is the unbounded array i.e. vector and it has size of 720
-        ROS_INFO("Printig....%lu", scan->ranges.size());
-        //const nav_msgs :: Odometry::ConstPtr& odom;
-                double x1=0,y1=0;
-
-        
         for(int i = 0 ; i < scan->ranges.size(); i++){
             ROS_INFO("Value at angle %f is : %f", (i*scan->angle_increment+scan->angle_min)*180/PI, scan->ranges[i]);
 
@@ -74,7 +77,7 @@ void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
                     // std::cout<<"Now :"<<i<<" scan range : "<<scan->ranges[i]<<" x :"<<x1<<"\n";
                     // std::cout<<"y :"<<y1<<"\n";
 
-                    matrix[abs(x1)][abs(y1)]=1;
+                    histogramGrid[abs(x1)][abs(y1)]=histogramGrid[abs(x1)][abs(y1)]+1;
 
             }
     
@@ -82,33 +85,125 @@ void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
 
 
 
-     //Now the matrix will be
+}
 
-        std::cout<<"===========================================\n";
-        for(int i=0;i<20;i++){
-            for (int j = 0; j < 20; j++)
-            {
-                /* code */
-                std::cout<<matrix[i][j]<<" ";
-                if(j%9==0 && j!=0 && j!=18){
-                    std::cout<<"||";
-                }
+void directionMatrix(){
 
-            }
-                std::cout<<"\n";
-                if(i%9==0 && i!=0 && i!=18){
-                            std::cout<<"===========================================\n";
+for(int i=0;i<20;i++){
+  for(int j=0;j<20;j++){
+    direction[i][j]=atan((j-bot_position_y)/(i-bot_position_x))*180/PI; 
+  }
+  
+}
 
-                }
+
+}
+
+double distance(double x1 ,double y1 ){
+  return sqrt((x1-bot_position_x)*(x1-bot_position_x)+(y1-bot_position_y)*(y1-bot_position_y));
+}
+
+void magnitudeMatrix(){
+  for(int i=0;i<20;i++){
+    for(int j=0;j<20;j++){
+      magnitude[i][j]=(histogramGrid[i][j])*(histogramGrid[i][j])*(A-B*distance(i,j));  
+    }
+  }
+}
+
+
+void printMatrix(){
+
+       //Now the matrix will be
+
+      std::cout<<"===========================================\n";
+      for(int i=0;i<20;i++){
+        for (int j = 0; j < 20; j++)
+        {
+          /* code */
+          std::cout<<histogramGrid[i][j]<<" ";
+          if(j%9==0 && j!=0 && j!=18){
+            std::cout<<"||";
+          }
+
         }
+          std::cout<<"\n";
+          if(i%9==0 && i!=0 && i!=18){
+                  std::cout<<"===========================================\n";
+
+          }
+      }
     
-        std::cout<<"===========================================\n";
+      std::cout<<"===========================================\n";
+
+
+}
+
+
+void printDirectionMatrix(){
+
+       //Now the matrix will be
+
+      std::cout<<"===========================================\n";
+      for(int i=0;i<20;i++){
+        for (int j = 0; j < 20; j++)
+        {
+          /* code */
+          std::cout<<direction[i][j]<<" ";
+          if(j%9==0 && j!=0 && j!=18){
+            std::cout<<"||";
+          }
+
+        }
+          std::cout<<"\n";
+          if(i%9==0 && i!=0 && i!=18){
+                  std::cout<<"===========================================\n";
+
+          }
+      }
+    
+      std::cout<<"===========================================\n";
+
+
+}
+
+
+void printMagnitudeMatrix(){
+
+       //Now the matrix will be
+
+      std::cout<<"===========================================\n";
+      for(int i=0;i<20;i++){
+        for (int j = 0; j < 20; j++)
+        {
+          /* code */
+          std::cout<<magnitude[i][j]<<" ";
+          if(j%9==0 && j!=0 && j!=18){
+            std::cout<<"||";
+          }
+
+        }
+          std::cout<<"\n";
+          if(i%9==0 && i!=0 && i!=18){
+                  std::cout<<"===========================================\n";
+
+          }
+      }
+    
+      std::cout<<"===========================================\n";
+
+
+}
 
 
 
 
-
-
+void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
+    //Ranges is the unbounded array i.e. vector and it has size of 720
+      ROS_INFO("Printig....%lu", scan->ranges.size());
+      //const nav_msgs :: Odometry::ConstPtr& odom;
+       maptomatrix(scan);
+      printMatrix();
 
 }
 
@@ -122,18 +217,18 @@ void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
 void odomCallback(const nav_msgs :: Odometry::ConstPtr& odom){
     //rostopic show Odometry
 
-    x=odom->pose.pose.position.x;
-    y=odom->pose.pose.position.y;
+  x=odom->pose.pose.position.x;
+  y=odom->pose.pose.position.y;
 
 
-    //curr_x=x;
-    //curr_y=y;
+  //curr_x=x;
+  //curr_y=y;
 
 
-    double quat_x=odom->pose.pose.orientation.x;
-    double quat_y=odom->pose.pose.orientation.y;
-    double quat_z=odom->pose.pose.orientation.z;
-    double quat_w=odom->pose.pose.orientation.w;
+  double quat_x=odom->pose.pose.orientation.x;
+  double quat_y=odom->pose.pose.orientation.y;
+  double quat_z=odom->pose.pose.orientation.z;
+  double quat_w=odom->pose.pose.orientation.w;
 
     tf::Quaternion q(quat_x, quat_y, quat_z, quat_w);       //Quaternion gives the rotation 
     tf::Matrix3x3 m(q);
@@ -144,7 +239,7 @@ void odomCallback(const nav_msgs :: Odometry::ConstPtr& odom){
     std::cout<<"Rotation around z axis is"<<theta*180/PI;
 
 
-    //Now we will make a    
+  //Now we will make a  
 }
 
 
@@ -177,32 +272,32 @@ int main(int argc, char **argv) {
     ros::Rate rate(10);
     ros::spin();
 
-      // while(ros::ok()) {
+      while(ros::ok()) {
 
-      //       double inc_x=goal.x-x;
-      //       double inc_y=goal.y-y;
+            double inc_x=goal.x-x;
+            double inc_y=goal.y-y;
             
             
-      //       double angle_to_goal=atan2(inc_y,inc_x);        //atan2 returns in radians and it is inverse tan.
+            double angle_to_goal=atan2(inc_y,inc_x);        //atan2 returns in radians and it is inverse tan.
 
-      //       if (abs(angle_to_goal - theta) > 0.1){          //if the vehicle is not facing to goal then change angle
-      //           deep.linear.x=0.0;
-      //           deep.angular.z=0.3;
-      //       }
+            if (abs(angle_to_goal - theta) > 0.1){          //if the vehicle is not facing to goal then change angle
+                deep.linear.x=0.0;
+                deep.angular.z=0.3;
+            }
 
-      //       else{                                           //if vehicle is facing to goal then go straight and dont change angle
-      //           deep.linear.x=0.5;
-      //           deep.angular.z=0.0;
+            else{                                           //if vehicle is facing to goal then go straight and dont change angle
+                deep.linear.x=0.5;
+                deep.angular.z=0.0;
 
-      //       }
+            }
 
-      //       //Publish the message
-      //       pub.publish(deep);
-      //       //Delays until it is time to send another message
-      //       rate.sleep();
+            //Publish the message
+            pub.publish(deep);
+            //Delays until it is time to send another message
+            rate.sleep();
 
 
-      //   }
+        }
 
 
 
