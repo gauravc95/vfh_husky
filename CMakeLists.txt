@@ -200,5 +200,5 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(random_driver vfh_husky.cpp )
+add_executable(random_driver random_driver.cpp )
 target_link_libraries(random_driver ${catkin_LIBRARIES})

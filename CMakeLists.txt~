@@ -10,11 +10,9 @@ project(random_husky_driver)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-
-  nav_core
-  nav_msgs
-  tf
-
+  nav_core 
+  tf 
+  nav_msgs 
 )
 
 ## System dependencies are found with CMake's conventions
