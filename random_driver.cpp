@@ -7,45 +7,32 @@
 #include <string>
 #include <math.h>
 #include <nav_msgs/Odometry.h>      
-<<<<<<< HEAD
 #include <tf/transform_datatypes.h>
 #include "tf/transform_listener.h"
 #include <angles/angles.h>
-=======
-#include "sensor_msgs/Imu.h"
-#include <tf/transform_datatypes.h>
-#include "tf/transform_listener.h"
-#include <angles/angles.h>
-#define PI 3.14159265
->>>>>>> upstream/master
 
 #define PI 3.14159265
 #define DMAX 10*sqrt(2)
 #define A 8
 #define B 0.5
+#define ALPHA 10
+#define SMAX 5
+#define NO_SECTORS 360/ALPHA
+#define THRESHOLD 0
 
 
-//creatindg the matrix
-std::vector<std::vector<double> > matrix(20, std::vector<double>(20, 0));   //20 rows and 20 columns initialized to 0
-double curr_x=10,curr_y=10;
-
-<<<<<<< HEAD
 //creatindg the matrix
 std::vector<std::vector<double> > histogramGrid(20, std::vector<double>(20, 0));  //20 rows and 20 columns initialized to 0
 std::vector<std::vector<double> > direction(20, std::vector<double>(20, 0));
 std::vector<std::vector<double> > magnitude(20, std::vector<double>(20, 0));
-
-
+std::vector<double> h(NO_SECTORS);
 double curr_x=10,curr_y=10;
-
+double dest_x=9,dest_y=-1;
 
 //if  distance is not between 29-31 then it has obstacle
 double bot_position_x=10,bot_position_y=10;
-=======
 
-//if  distance is not between 29-31 then it has obstacle
 
->>>>>>> upstream/master
 
 
 void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value from polar to matrix
@@ -54,7 +41,7 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
 
 
         for(int i = 0 ; i < scan->ranges.size(); i++){
-            ROS_INFO("Value at angle %f is : %f", (i*scan->angle_increment+scan->angle_min)*180/PI, scan->ranges[i]);
+           // ROS_INFO("Value at angle %f is : %f", (i*scan->angle_increment+scan->angle_min)*180/PI, scan->ranges[i]);
 
             if (scan->ranges[i]>29 && scan->ranges[i]<31){
                     //not an obstacle
@@ -66,8 +53,8 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
                 //currrently at origin
                     double x=scan->ranges[i]*cos((135*PI/180)-(i*scan->angle_increment));
                     double y=scan->ranges[i]*sin((135*PI/180)-(i*scan->angle_increment));   
-                    std::cout<<"i :"<<i<<" scan range : "<<scan->ranges[i]<<" x :"<<x<<"\n";
-                    std::cout<<"y :"<<y<<"\n";
+                  //  std::cout<<"i :"<<i<<" scan range : "<<scan->ranges[i]<<" x :"<<x<<"\n";
+                    //std::cout<<"y :"<<y<<"\n";
 
                     if(x>0 && y>0){
                         x1=curr_x-y;
@@ -94,11 +81,7 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
                     // std::cout<<"Now :"<<i<<" scan range : "<<scan->ranges[i]<<" x :"<<x1<<"\n";
                     // std::cout<<"y :"<<y1<<"\n";
 
-<<<<<<< HEAD
-                    histogramGrid[abs(x1)][abs(y1)]=histogramGrid[abs(x1)][abs(y1)]+1;
-=======
-                    matrix[abs(x1)][abs(y1)]=matrix[abs(x1)][abs(y1)]+1;
->>>>>>> upstream/master
+                    histogramGrid[abs(x1)][abs(y1)]=1;
 
             }
     
@@ -108,7 +91,6 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
 
 }
 
-<<<<<<< HEAD
 void directionMatrix(){
 
 for(int i=0;i<20;i++){
@@ -213,55 +195,101 @@ void printMagnitudeMatrix(){
       }
     
       std::cout<<"===========================================\n";
-=======
-void displaygrid() //display the matrix[20][20]
-{
-     //Now the matrix will be
 
-        std::cout<<"===========================================\n";
-        for(int i=0;i<20;i++){
-            for (int j = 0; j < 20; j++)
-            {
-                /* code */
-                std::cout<<matrix[i][j]<<" ";
-                if(j%9==0 && j!=0 && j!=18){
-                    std::cout<<"||";
-                }
 
-            }
-                std::cout<<"\n";
-                if(i%9==0 && i!=0 && i!=18){
-                            std::cout<<"===========================================\n";
+}
 
-                }
-        }
+void findPolarObstacleDensity(){
+  int k;
+  for(int i=0;i<20;i++){
+    for (int j = 0; j < 20; j++)
+    {
+      /* code */
+      //2nd quadrant
+      if(i<10 && j<10){
+        k=(abs(direction[i][j])+90)/ALPHA;
+      }
+        //4th quadrant
+          if(i>=10 && j>=10){
+                k=(abs(direction[i][j])+270)/ALPHA;
+
+      }
+
+//3rd quadrant
+        if(i>=10 && j<10){
+                k=(abs(direction[i][j])+180)/ALPHA;
+
+      }
+//1st quadrant
+        if(i<=10 && j>=10){
+                k=abs(direction[i][j])/ALPHA;
+
+      }
+
+    //double k=(direction[i][j]/ALPHA);
+    std::cout<<" i :"<<i<<"j :"<<j;
+    std::cout<<" k :"<<(k)<<" direction :"<<direction[i][j]<<"\n";
+    if (i!=10 && j!=10)
+    h[k]+=magnitude[i][j];
+    }
     
-        std::cout<<"===========================================\n";
->>>>>>> upstream/master
+  }
+}
+
+
+void findTheta(){
+
+  double k_targ;
+  //2nd quadrant
+  if(dest_x<10 && dest_y<10){
+        k_targ=(abs(direction[dest_x][dest_y])+90)/ALPHA;
+      }
+        //4th quadrant
+          if(dest_x>=10 && dest_y>=10){
+                k_targ=(abs(direction[dest_x][dest_y])+270)/ALPHA;
+
+      }
+
+//3rd quadrant
+        if(dest_x>=10 && dest_y<10){
+                k_targ=(abs(direction[dest_x][dest_y])+180)/ALPHA;
+
+      }
+//1st quadrant
+        if(dest_x<=10 && dest_y>=10){
+                k_targ=abs(direction[dest_x][dest_y])/ALPHA;
+
+      }
+
+  
+
 
 
 }
 
 
-<<<<<<< HEAD
+void printPolarDensity(){
+      std::cout<<" tt";
 
+  std::cout<<"------------------------------------------\n";
+  for (int i = 0; i < NO_SECTORS; ++i)
+  {
+    /* code */
+    std::cout<<h[i]<<" ";
+  }
+
+}
 
 void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
     //Ranges is the unbounded array i.e. vector and it has size of 720
       ROS_INFO("Printig....%lu", scan->ranges.size());
       //const nav_msgs :: Odometry::ConstPtr& odom;
        maptomatrix(scan);
-      printMatrix();
-
-=======
-void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
-    //Ranges is the unbounded array i.e. vector and it has size of 720
-        ROS_INFO("Printig....%lu", scan->ranges.size());
-        //const nav_msgs :: Odometry::ConstPtr& odom;
-
-        maptomatrix(scan);
-        displaygrid();
->>>>>>> upstream/master
+       directionMatrix();
+       magnitudeMatrix();
+      printDirectionMatrix();
+       findPolarObstacleDensity();
+       printPolarDensity();
 }
 
 
@@ -274,7 +302,6 @@ void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
 void odomCallback(const nav_msgs :: Odometry::ConstPtr& odom){
     //rostopic show Odometry
 
-<<<<<<< HEAD
   x=odom->pose.pose.position.x;
   y=odom->pose.pose.position.y;
 
@@ -287,20 +314,6 @@ void odomCallback(const nav_msgs :: Odometry::ConstPtr& odom){
   double quat_y=odom->pose.pose.orientation.y;
   double quat_z=odom->pose.pose.orientation.z;
   double quat_w=odom->pose.pose.orientation.w;
-=======
-    x=odom->pose.pose.position.x;
-    y=odom->pose.pose.position.y;
-
-
-    //curr_x=x;
-    //curr_y=y;
-
-
-    double quat_x=odom->pose.pose.orientation.x;
-    double quat_y=odom->pose.pose.orientation.y;
-    double quat_z=odom->pose.pose.orientation.z;
-    double quat_w=odom->pose.pose.orientation.w;
->>>>>>> upstream/master
 
     tf::Quaternion q(quat_x, quat_y, quat_z, quat_w);       //Quaternion gives the rotation 
     tf::Matrix3x3 m(q);
@@ -311,11 +324,7 @@ void odomCallback(const nav_msgs :: Odometry::ConstPtr& odom){
     std::cout<<"Rotation around z axis is"<<theta*180/PI;
 
 
-<<<<<<< HEAD
   //Now we will make a  
-=======
-    //Now we will make a    
->>>>>>> upstream/master
 }
 
 
@@ -346,10 +355,7 @@ int main(int argc, char **argv) {
 
     //Sets the loop to publish at a rate of 10Hz
     ros::Rate rate(10);
-<<<<<<< HEAD
     ros::spin();
-=======
->>>>>>> upstream/master
 
       while(ros::ok()) {
 
@@ -374,17 +380,10 @@ int main(int argc, char **argv) {
             pub.publish(deep);
             //Delays until it is time to send another message
             rate.sleep();
-<<<<<<< HEAD
-=======
-            ros::spinOnce();
->>>>>>> upstream/master
 
 
         }
 
 
-<<<<<<< HEAD
 
-=======
->>>>>>> upstream/master
 }
