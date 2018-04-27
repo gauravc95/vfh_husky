@@ -7,21 +7,30 @@
 #include <string>
 #include <math.h>
 #include <nav_msgs/Odometry.h>      
-#include "sensor_msgs/Imu.h"
 #include <tf/transform_datatypes.h>
 #include "tf/transform_listener.h"
 #include <angles/angles.h>
+
 #define PI 3.14159265
+#define DMAX 10*sqrt(2)
+#define A 8
+#define B 0.5
+#define ALPHA 10
+#define SMAX 5
 
 
 
 //creatindg the matrix
-std::vector<std::vector<double> > matrix(20, std::vector<double>(20, 0));   //20 rows and 20 columns initialized to 0
+std::vector<std::vector<double> > histogramGrid(20, std::vector<double>(20, 0));  //20 rows and 20 columns initialized to 0
+std::vector<std::vector<double> > direction(20, std::vector<double>(20, 0));
+std::vector<std::vector<double> > magnitude(20, std::vector<double>(20, 0));
+
+
 double curr_x=10,curr_y=10;
 
 
 //if  distance is not between 29-31 then it has obstacle
-
+double bot_position_x=10,bot_position_y=10;
 
 
 void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value from polar to matrix
@@ -70,7 +79,7 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
                     // std::cout<<"Now :"<<i<<" scan range : "<<scan->ranges[i]<<" x :"<<x1<<"\n";
                     // std::cout<<"y :"<<y1<<"\n";
 
-                    matrix[abs(x1)][abs(y1)]=matrix[abs(x1)][abs(y1)]+1;
+                    histogramGrid[abs(x1)][abs(y1)]=histogramGrid[abs(x1)][abs(y1)]+1;
 
             }
     
@@ -80,41 +89,124 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
 
 }
 
-void displaygrid() //display the matrix[20][20]
-{
-     //Now the matrix will be
+void directionMatrix(){
 
-        std::cout<<"===========================================\n";
-        for(int i=0;i<20;i++){
-            for (int j = 0; j < 20; j++)
-            {
-                /* code */
-                std::cout<<matrix[i][j]<<" ";
-                if(j%9==0 && j!=0 && j!=18){
-                    std::cout<<"||";
-                }
-
-            }
-                std::cout<<"\n";
-                if(i%9==0 && i!=0 && i!=18){
-                            std::cout<<"===========================================\n";
-
-                }
-        }
-    
-        std::cout<<"===========================================\n";
+for(int i=0;i<20;i++){
+  for(int j=0;j<20;j++){
+    direction[i][j]=atan((j-bot_position_y)/(i-bot_position_x))*180/PI; 
+  }
+  
+}
 
 
 }
+
+double distance(double x1 ,double y1 ){
+  return sqrt((x1-bot_position_x)*(x1-bot_position_x)+(y1-bot_position_y)*(y1-bot_position_y));
+}
+
+void magnitudeMatrix(){
+  for(int i=0;i<20;i++){
+    for(int j=0;j<20;j++){
+      magnitude[i][j]=(histogramGrid[i][j])*(histogramGrid[i][j])*(A-B*distance(i,j));  
+    }
+  }
+}
+
+
+void printMatrix(){
+
+       //Now the matrix will be
+
+      std::cout<<"===========================================\n";
+      for(int i=0;i<20;i++){
+        for (int j = 0; j < 20; j++)
+        {
+          /* code */
+          std::cout<<histogramGrid[i][j]<<" ";
+          if(j%9==0 && j!=0 && j!=18){
+            std::cout<<"||";
+          }
+
+        }
+          std::cout<<"\n";
+          if(i%9==0 && i!=0 && i!=18){
+                  std::cout<<"===========================================\n";
+
+          }
+      }
+    
+      std::cout<<"===========================================\n";
+
+
+}
+
+
+void printDirectionMatrix(){
+
+       //Now the matrix will be
+
+      std::cout<<"===========================================\n";
+      for(int i=0;i<20;i++){
+        for (int j = 0; j < 20; j++)
+        {
+          /* code */
+          std::cout<<direction[i][j]<<" ";
+          if(j%9==0 && j!=0 && j!=18){
+            std::cout<<"||";
+          }
+
+        }
+          std::cout<<"\n";
+          if(i%9==0 && i!=0 && i!=18){
+                  std::cout<<"===========================================\n";
+
+          }
+      }
+    
+      std::cout<<"===========================================\n";
+
+
+}
+
+
+void printMagnitudeMatrix(){
+
+       //Now the matrix will be
+
+      std::cout<<"===========================================\n";
+      for(int i=0;i<20;i++){
+        for (int j = 0; j < 20; j++)
+        {
+          /* code */
+          std::cout<<magnitude[i][j]<<" ";
+          if(j%9==0 && j!=0 && j!=18){
+            std::cout<<"||";
+          }
+
+        }
+          std::cout<<"\n";
+          if(i%9==0 && i!=0 && i!=18){
+                  std::cout<<"===========================================\n";
+
+          }
+      }
+    
+      std::cout<<"===========================================\n";
+
+
+}
+
+
 
 
 void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
     //Ranges is the unbounded array i.e. vector and it has size of 720
-        ROS_INFO("Printig....%lu", scan->ranges.size());
-        //const nav_msgs :: Odometry::ConstPtr& odom;
+      ROS_INFO("Printig....%lu", scan->ranges.size());
+      //const nav_msgs :: Odometry::ConstPtr& odom;
+       maptomatrix(scan);
+      printMatrix();
 
-        maptomatrix(scan);
-        displaygrid();
 }
 
 
@@ -127,18 +219,18 @@ void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
 void odomCallback(const nav_msgs :: Odometry::ConstPtr& odom){
     //rostopic show Odometry
 
-    x=odom->pose.pose.position.x;
-    y=odom->pose.pose.position.y;
+  x=odom->pose.pose.position.x;
+  y=odom->pose.pose.position.y;
 
 
-    //curr_x=x;
-    //curr_y=y;
+  //curr_x=x;
+  //curr_y=y;
 
 
-    double quat_x=odom->pose.pose.orientation.x;
-    double quat_y=odom->pose.pose.orientation.y;
-    double quat_z=odom->pose.pose.orientation.z;
-    double quat_w=odom->pose.pose.orientation.w;
+  double quat_x=odom->pose.pose.orientation.x;
+  double quat_y=odom->pose.pose.orientation.y;
+  double quat_z=odom->pose.pose.orientation.z;
+  double quat_w=odom->pose.pose.orientation.w;
 
     tf::Quaternion q(quat_x, quat_y, quat_z, quat_w);       //Quaternion gives the rotation 
     tf::Matrix3x3 m(q);
@@ -149,7 +241,7 @@ void odomCallback(const nav_msgs :: Odometry::ConstPtr& odom){
     std::cout<<"Rotation around z axis is"<<theta*180/PI;
 
 
-    //Now we will make a    
+  //Now we will make a  
 }
 
 
@@ -180,6 +272,7 @@ int main(int argc, char **argv) {
 
     //Sets the loop to publish at a rate of 10Hz
     ros::Rate rate(10);
+    ros::spin();
 
       while(ros::ok()) {
 
@@ -204,10 +297,10 @@ int main(int argc, char **argv) {
             pub.publish(deep);
             //Delays until it is time to send another message
             rate.sleep();
-            ros::spinOnce();
 
 
         }
+
 
 
 }
