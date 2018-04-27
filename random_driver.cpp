@@ -34,7 +34,7 @@ double curr_x=10,curr_y=10;
 
 //if  distance is not between 29-31 then it has obstacle
 double bot_position_x=10,bot_position_y=10;
-int findx(double x,double y)
+double findx(double x,double y)
 {
           double x1=0,y1=0;
 
@@ -61,7 +61,7 @@ int findx(double x,double y)
     return x1;
 }
 
-int findy(double x,double y)
+double findy(double x,double y)
 {   double x1=0,y1=0;
 
   if(x>0 && y>0){
@@ -86,11 +86,12 @@ int findy(double x,double y)
 
   return y1;
 }
-
+//update
 void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value from polar to matrix
 {
         double x1=0,y1=0;
-        double sox=0,soy=0;
+        double sox=0;
+        double soy=0;
 
 
         for(int i = 0 ; i < scan->ranges.size(); i++){
@@ -98,7 +99,7 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
             std::cout<<"robot ---x"<<x<<"robot --y"<<y;
 
             std::cout<<"robot x"<<findx(x,y)<<"robot y"<<findx(x,y);
-
+/*
             if(findx(x,y)==10 && findy(x,y)==10)
             {
                 sox=0;
@@ -108,7 +109,7 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
             {
                 sox=10;
                 soy=10;
-            }
+            }*/
 
             if (scan->ranges[i]>29 && scan->ranges[i]<31){
                     //not an obstacle
@@ -118,21 +119,19 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
                 //this is obstacle
                 //find x and y coordinate for every range
                 //currrently at origin
-                    double x=scan->ranges[i]*cos((135*PI/180)-(i*scan->angle_increment)+theta);
-                    double y=scan->ranges[i]*sin((135*PI/180)-(i*scan->angle_increment)+theta);   
-                    std::cout<<"i :"<<i<<" scan range : "<<scan->ranges[i]<<" x :"<<x<<"\n";
-                    std::cout<<"y :"<<y<<"\n";
+                    double xi=scan->ranges[i]*cos((135*PI/180)-(i*scan->angle_increment)+theta);
+                    double yi=scan->ranges[i]*sin((135*PI/180)-(i*scan->angle_increment)+theta);   
+                    std::cout<<"Now before mapping with theta :"<<" x :"<<xi<<"y :"<<yi<<   "\n";
 
-                    x1=findx(x+sox,y+soy);
-                    y1=findy(x+sox,y+soy);
 
-                    //x1=x1+sox;
-                    //y1=y1+soy;
+                    x1=findx(xi+x,yi+y);
+                    y1=findy(xi+x,yi+y);
+
+                    
                     // y1 = curr_x + x;
                     // x1 = curr_y - y;
 
-                     std::cout<<"Now :"<<i<<" scan range : "<<scan->ranges[i]<<" x :"<<x1<<"\n";
-                     std::cout<<"y :"<<y1<<"\n";
+                     std::cout<<"Now after mapping :"<<" x :"<<x1<<"y :"<<y1<<"\n";
 
                     histogramGrid[abs(x1)][abs(y1)]=histogramGrid[abs(x1)][abs(y1)]+1;
 
