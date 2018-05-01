@@ -31,7 +31,7 @@ std::vector<std::vector<double> > magnitude(20, std::vector<double>(20, 0));
 std::vector<double> h(NO_SECTORS);
 std::vector<double> candidateSectors;
 double curr_x=10,curr_y=10;
-double dest_x=15,dest_y=5;
+double dest_x,dest_y;
 
 //if  distance is not between 29-31 then it has obstacle
 double bot_position_x,bot_position_y;
@@ -489,6 +489,12 @@ int main(int argc, char **argv) {
     ros::Subscriber sub = nh.subscribe("/odometry/filtered", 10, odomCallback);
 
 
+    std::cout<<"ENTER THE coordinates x and y:";
+    std::cin>>dest_x;
+    std::cin>>dest_y;
+
+
+
     geometry_msgs::Point goal;              //rostopic show Odometry
     //say goal is (5,5)
     goal.x=5;
@@ -500,40 +506,40 @@ int main(int argc, char **argv) {
 
     //Sets the loop to publish at a rate of 10Hz
     ros::Rate rate(10);
-    ros::spin();
+    //ros::spin();
 
-    //   while(ros::ok()) {
+      while(ros::ok()) {
 
-    //         // double inc_x=goal.x-x;
-    //         // double inc_y=goal.y-y;
+            // double inc_x=goal.x-x;
+            // double inc_y=goal.y-y;
             
             
-    //         // double angle_to_goal=atan2(inc_y,inc_x);        //atan2 returns in radians and it is inverse tan.
+            // double angle_to_goal=atan2(inc_y,inc_x);        //atan2 returns in radians and it is inverse tan.
 
-    //         // if (abs(angle_to_goal - theta) > 0.1){          //if the vehicle is not facing to goal then change angle
-    //         //     deep.linear.x=0.0;
-    //         //     deep.angular.z=0.3;
-    //         // }
+            // if (abs(angle_to_goal - theta) > 0.1){          //if the vehicle is not facing to goal then change angle
+            //     deep.linear.x=0.0;
+            //     deep.angular.z=0.3;
+            // }
 
-    //         // else{                                           //if vehicle is facing to goal then go straight and dont change angle
-    //         //     deep.linear.x=0.5;
-    //         //     deep.angular.z=0.0;
+            // else{                                           //if vehicle is facing to goal then go straight and dont change angle
+            //     deep.linear.x=0.5;
+            //     deep.angular.z=0.0;
 
-    //         // }
+            // }
 
-    //          if(cnt%10!=0){
-    //              deep.linear.x=2.0;
-    //              cnt++;
-    //          }
+             if(cnt%10!=0){
+                 deep.linear.x=2.0;
+                 cnt++;
+             }
 
-    //         //Publish the message
-    //         pub.publish(deep);
-    //         //Delays until it is time to send another message
-    //         rate.sleep();
-    // ros::spinOnce();
+            //Publish the message
+            pub.publish(deep);
+            //Delays until it is time to send another message
+            rate.sleep();
+    ros::spinOnce();
 
 
-    //     }
+        }
 
 
 
