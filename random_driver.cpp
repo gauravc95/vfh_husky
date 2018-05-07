@@ -34,7 +34,7 @@ double curr_x=10,curr_y=10;
 double dest_x=5,dest_y=5;
 
 //if  distance is not between 29-31 then it has obstacle
-double bot_position_x,bot_position_y;
+int bot_position_x,bot_position_y;
  //Initializing the positions and z axis orientation
    double x;
    double y;
@@ -42,7 +42,7 @@ double bot_position_x,bot_position_y;
    
 
 //if  distance is not between 29-31 then it has obstacle
-double findx(double x,double y)
+int findx(double x,double y)
 {
           double x1=0,y1=0;
 
@@ -53,7 +53,7 @@ double findx(double x,double y)
 
     else if(x<0 && y<0){
         x1=(-1)*y+curr_x;
-        y1=(-1)*x+curr_y;
+        y1=x+curr_y;
     }
 
     else if(x>0 && y<0){
@@ -62,14 +62,14 @@ double findx(double x,double y)
     }
     
     else if(x<0 && y>0){
-        y1=curr_y-x;
+        y1=curr_y+x;
         x1=curr_x-y;
     }
 
     return x1;
 }
 
-double findy(double x,double y)
+int findy(double x,double y)
 {   double x1=0,y1=0;
 
   if(x>0 && y>0){
@@ -79,7 +79,7 @@ double findy(double x,double y)
 
   else if(x<0 && y<0){
       x1=(-1)*y+curr_x;
-      y1=(-1)*x+curr_y;
+      y1=x+curr_y;
   }
 
   else if(x>0 && y<0){
@@ -88,7 +88,7 @@ double findy(double x,double y)
   }
   
   else if(x<0 && y>0){
-      y1=curr_y-x;
+      y1=curr_y+x;
       x1=curr_x-y;
   }
 
@@ -97,13 +97,10 @@ double findy(double x,double y)
 //update
 void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value from polar to matrix
 {
-        double x1=0,y1=0;
-        double sox=0;
-        double soy=0;
-
+        int x1=0,y1=0;
 
         for(int i = 0 ; i < scan->ranges.size(); i++){
-            ROS_INFO("Value at angle %f is : %f", (i*scan->angle_increment+scan->angle_min)*180/PI, scan->ranges[i]);
+          //  ROS_INFO("Value at angle %f is : %f", (i*scan->angle_increment+scan->angle_min)*180/PI, scan->ranges[i]);
            // std::cout<<"robot ---x"<<x<<"robot --y"<<y;
 
            // std::cout<<"robot x"<<findx(x,y)<<"robot y"<<findx(x,y);
@@ -129,17 +126,21 @@ void maptomatrix(const sensor_msgs::LaserScan::ConstPtr& scan)  //to map value f
                 //currrently at origin
                     double xi=scan->ranges[i]*cos((135*PI/180)-(i*scan->angle_increment)+theta);
                     double yi=scan->ranges[i]*sin((135*PI/180)-(i*scan->angle_increment)+theta);   
-                    std::cout<<"Now before mapping with theta :"<<" x :"<<xi<<"y :"<<yi<<   "\n";
+                   // std::cout<<"Now before mapping with theta :"<<" x :"<<xi<<"y :"<<yi<<   "\n";
 
 
                     x1=findx(xi+x,yi+y);
                     y1=findy(xi+x,yi+y);
 
                     
-                    // y1 = curr_x + x;
-                    // x1 = curr_y - y;
+               //      double X=scan->ranges[i]*cos((135*PI/180)-(i*scan->angle_increment));
+               //      double Y=scan->ranges[i]*sin((135*PI/180)-(i*scan->angle_increment)); 
+               //      double xi=X*cos(theta)-Y*sin(theta)+x;
+               //      double yi=X*sin(theta)+Y*cos(theta)+y;  
+					          // x1=findx(xi,yi);
+               //      y1=findy(xi,yi);
 
-                     std::cout<<"Now after mapping :"<<" x :"<<x1<<"y :"<<y1<<"\n";
+                   //  std::cout<<"Now after mapping :"<<" x :"<<x1<<"y :"<<y1<<"\n";
 
                    //std::cout<<"Now after mapping :"<<" x :"<<x1<<"y :"<<y1<<"\n";
                      if(x1>=0 && x1<20 && y1>=0 && y1<20 && histogramGrid[abs(x1)][abs(y1)] < 5 
@@ -169,42 +170,71 @@ void findPolarObstacleDensity(){
 double findTheta(){
   int k_targ = direction[dest_x][dest_y] / ALPHA;
   std::cout<<" ktarg="<<k_targ<<"\n";
-  if(h[k_targ] == 0) return (k_targ*ALPHA + (ALPHA/2));             //simply go straight
+  bool flag = false;
+  if(h[k_targ] < THRESHOLD){
+  	flag=true;
+  	for(int i = 1 ; i <= SAFE_SECTOR_CNT/2 ; i++){
+  		if(h[(NO_SECTORS+k_targ-i)%(NO_SECTORS)] < THRESHOLD && h[(NO_SECTORS+k_targ+i)%(NO_SECTORS)] < THRESHOLD )
+  			continue;
+  		else{
+  			flag = false;
+  			break;
+  		}
+  	}
+  } 
+  if(flag)return (k_targ*ALPHA + (ALPHA/2));    
+  
+  //if(h[k_targ] ==0 ) return (k_targ*ALPHA + (ALPHA/2));       //simply go straight
 
 
   int k_f_l = 0, k_f_r = 0;
   int k_n_l = k_targ, k_n_r  = k_targ;
   int cnt = 0 ;
 
-  //calculate start sectors
-  while(h[k_n_l] > THRESHOLD && cnt++ < NO_SECTORS){ 
-    k_n_l = (NO_SECTORS+k_n_l+1)%(NO_SECTORS);
-  }
+
+while(k_f_l < SAFE_SECTOR_CNT){
+  	//calculate start sectors LEFT
+  	k_n_l = (NO_SECTORS+k_n_l+k_f_l+1)%(NO_SECTORS);
+  	k_f_l = 0;
+  	cnt = 0;
+	  while(h[k_n_l] > THRESHOLD && cnt++ < NO_SECTORS){ 
+	    k_n_l = (NO_SECTORS+k_n_l+1)%(NO_SECTORS);
+	  }
+	 	k_n_l = (NO_SECTORS+k_n_l-1)%(NO_SECTORS);
+	 	//calculate end sectors LEFT
+	   cnt = 0;
+	  for(int i = 1 ; h[(NO_SECTORS + k_n_l+i)%(NO_SECTORS)] < THRESHOLD && cnt++ < SAFE_SECTOR_CNT ; i++){
+	   //for(int i = 1 ; h[(NO_SECTORS + k_n_l+i)%(NO_SECTORS)] < THRESHOLD ; i++){
+	    k_f_l++;
+	  }
+}
+
+
+while(k_f_r < SAFE_SECTOR_CNT){
+	k_n_r = (NO_SECTORS+k_n_r-k_f_r-1)%(NO_SECTORS);
+	k_f_r = 0;
+  //calculate start sectors RIGHT
   cnt = 0;
   while(h[k_n_r] > THRESHOLD  && cnt++ < NO_SECTORS){ 
     k_n_r = (NO_SECTORS+k_n_r-1)%(NO_SECTORS);
   }
-  k_n_l = (NO_SECTORS+k_n_l-1)%(NO_SECTORS);
   k_n_r = (NO_SECTORS+k_n_r+1)%(NO_SECTORS);
-
-
-  std::cout<<"k_n_l="<<k_n_l<<"  && k_n_r="<<k_n_r<<"\n";
-  //calculate end sectors
-  cnt = 0;
-  for(int i = 1 ; h[(NO_SECTORS + k_n_l+i)%(NO_SECTORS)] < THRESHOLD && cnt++ < SAFE_SECTOR_CNT ; i++){
-    k_f_l++;
-  }
+	//calculate end sectors RIGHT
   cnt=0;
   for(int i = 1 ; h[(NO_SECTORS + k_n_r-i)%(NO_SECTORS)] < THRESHOLD && cnt++ < SAFE_SECTOR_CNT ; i++){
+  //for(int i = 1 ; h[(NO_SECTORS + k_n_r-i)%(NO_SECTORS)] < THRESHOLD; i++){
     k_f_r++;
   }
+}
 
+  std::cout<<"k_n_l="<<k_n_l<<"  && k_n_r="<<k_n_r<<"\n";
   std::cout<<"k_f_l="<<k_f_l<<"  && k_f_r="<<k_f_r<<"\n";
   if(std::max(k_f_l, k_f_r)*ALPHA < SMAX){
       std::cout<<"CANNOT TURN!!!"<<std::endl;   
       return -1;
     }
-
+    k_n_l++;
+    k_n_r--;
   if(k_f_l < k_f_r && k_f_l >= SAFE_SECTOR_CNT){
     return (k_n_l*ALPHA) + (((k_f_l*ALPHA) + SMAX)/2);
   }
@@ -234,7 +264,8 @@ void directionMatrix(){
   
 //  }
 
-    float X, Y, ang;
+   float X, Y, ang;
+   std::cout<<"bot_x="<<bot_position_x<<" && bot_y="<<bot_position_y<<"\n";
   for(int i=0;i<20;i++){
     for(int j=0;j<20;j++){
       Y = i - bot_position_x;
@@ -366,11 +397,11 @@ void processLaserScan(const sensor_msgs::LaserScan::ConstPtr& scan){
       maptomatrix(scan);
       printMatrix();
       directionMatrix();
-      //printDirectionMatrix();
+      printDirectionMatrix();
       magnitudeMatrix();
       //printMagnitudeMatrix();
       findPolarObstacleDensity();
-      //printPolarObstacleDensity();
+      printPolarObstacleDensity();
 
 }
 
@@ -414,10 +445,13 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "random_husky_commands");
     ros::NodeHandle nh;
     ros::Subscriber scanSub;
-
+    int x_in,y_in;
        std::cout<<"ENTER THE coordinates x and y:";
-    std::cin>>dest_x;
-    std::cin>>dest_y;
+    std::cin>>x_in;
+    std::cin>>y_in;
+
+    dest_x = findx(x_in,y_in);
+    dest_y = findy(x_in,y_in);
 
 
 
@@ -429,11 +463,6 @@ int main(int argc, char **argv) {
     ros::Subscriber sub = nh.subscribe("/odometry/filtered", 10, odomCallback);
 
 
-    geometry_msgs::Point goal;              //rostopic show Odometry
-    //say goal is (5,5)
-    goal.x=5;
-    goal.y=5;
-
     geometry_msgs::Twist deep;              ///cmd_vel
 
     //Sets up the random number generator
@@ -441,34 +470,34 @@ int main(int argc, char **argv) {
 
     //Sets the loop to publish at a rate of 10Hz
     ros::Rate rate(10);
-      while(ros::ok()) {
+//       while(ros::ok()) {
 
-            double inc_x=goal.x-x;
-            double inc_y=goal.y-y;
+//             double inc_x=goal.x-x;
+//             double inc_y=goal.y-y;
             
             
-            double angle_to_goal=atan2(inc_y,inc_x);        //atan2 returns in radians and it is inverse tan.
+//             double angle_to_goal=atan2(inc_y,inc_x);        //atan2 returns in radians and it is inverse tan.
 
-            if (abs(angle_to_goal - theta) > 0.1){          //if the vehicle is not facing to goal then change angle
-                deep.linear.x=0.0;
-                deep.angular.z=0.3;
-            }
+//             if (abs(angle_to_goal - theta) > 0.1){          //if the vehicle is not facing to goal then change angle
+//                 deep.linear.x=0.0;
+//                 deep.angular.z=0.3;
+//             }
 
-            else{                                           //if vehicle is facing to goal then go straight and dont change angle
-                deep.linear.x=0.5;
-                deep.angular.z=0.0;
+//             else{                                           //if vehicle is facing to goal then go straight and dont change angle
+//                 deep.linear.x=0.5;
+//                 deep.angular.z=0.0;
 
-            }
+//             }
 
-            //Publish the message
-            pub.publish(deep);
-            //Delays until it is time to send another message
-            rate.sleep();
-            ros::spinOnce();
+//             //Publish the message
+//             pub.publish(deep);
+//             //Delays until it is time to send another message
+//             rate.sleep();
+//             ros::spinOnce();
 
 
-}
-/*
+// }
+
  while(ros::ok()) {
 
             //double inc_x=goal.x-x;
@@ -491,14 +520,21 @@ int main(int argc, char **argv) {
           diff = theta_dest - theta;
         }
         std::cout<<"\ntheta="<<theta_dest<<" && "<<theta<<" => "<<(diff)*180/PI<<"\n";
-
+            
+            // if(diff<0){
+            //   diff=2*PI-diff;
+            // }
+            
             if (diff > 0.05){          //if the vehicle is not facing to goal then change angle
                 deep.linear.x=0.0;
-                deep.angular.z=0.3;
+                deep.angular.z=0.1;
             }
-
+            else if(diff<0){
+            	deep.linear.x = 0.0;
+            	deep.angular.z=-0.1;
+            }
             else{                                           //if vehicle is facing to goal then go straight and dont change angle
-                deep.linear.x=5;
+                deep.linear.x=0.5;
                 deep.angular.z=0.0;
 
             }
@@ -520,7 +556,7 @@ int main(int argc, char **argv) {
     ros::spinOnce();
 
 
-        }*/
+        }
 
 
 }
